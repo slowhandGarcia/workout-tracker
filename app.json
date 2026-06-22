@@ -37,7 +37,8 @@
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to attach a picture to your workout.",
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to take a picture for your workout."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

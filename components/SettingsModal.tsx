@@ -23,6 +23,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const isDark = theme === "dark";
   const insets = useSafeAreaInsets();
   const isGuest = useAuthStore((s) => s.isGuest);
+  const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const { name, bio, location, email, avatarUri } = useProfileStore();
 
@@ -41,8 +42,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       {
         text: "Log Out",
         style: "destructive",
-        onPress: () => {
-          logout();
+        onPress: async () => {
+          await logout();
           router.replace("/");
         },
       },
@@ -138,7 +139,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     Username
                   </Text>
                   <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                    {name}
+                    {user?.username ?? name}
                   </Text>
                 </View>
 
@@ -150,7 +151,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     Email
                   </Text>
                   <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                    {isGuest ? "Guest" : email ?? "—"}
+                    {isGuest ? "Guest" : user?.email ?? email ?? "—"}
                   </Text>
                 </View>
 

@@ -15,6 +15,16 @@ import { useAuthStore } from "@/store/useAuthStore";
 
 export default function WelcomeScreen() {
   const setGuest = useAuthStore((s) => s.setGuest);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const isLoggedIn = useAuthStore((s) => s.user?.isLoggedIn ?? false);
+
+  // Skip the Welcome screen for a user who's already signed in on this
+  // device — only once persisted auth state has finished loading.
+  useEffect(() => {
+    if (hasHydrated && isLoggedIn) {
+      router.replace("/(tabs)/home");
+    }
+  }, [hasHydrated, isLoggedIn]);
 
   const logoOpacity = useSharedValue(0);
   const logoScale = useSharedValue(0.9);
@@ -47,6 +57,10 @@ export default function WelcomeScreen() {
     opacity: buttonOpacity.value,
     transform: [{ translateY: buttonTranslateY.value }],
   }));
+
+  if (hasHydrated && isLoggedIn) {
+    return <View className="flex-1 bg-black" />;
+  }
 
   return (
     <LinearGradient colors={["#1e293b", "#0f172a", "#000000"]} style={{ flex: 1 }}>

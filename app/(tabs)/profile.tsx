@@ -16,10 +16,11 @@ export default function ProfileScreen() {
     useProfileStore();
   const workouts = useWorkoutStore((s) => s.workouts);
   const isGuest = useAuthStore((s) => s.isGuest);
+  const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const colors = useThemeColors();
 
-  const memberSince = new Date(createdAt).toLocaleDateString("en-US", {
+  const memberSince = new Date(user?.createdAt ?? createdAt).toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
   });
@@ -94,8 +95,8 @@ export default function ProfileScreen() {
       {
         text: "Log Out",
         style: "destructive",
-        onPress: () => {
-          logout();
+        onPress: async () => {
+          await logout();
           router.replace("/");
         },
       },

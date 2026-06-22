@@ -95,8 +95,8 @@ export function SideMenu({ visible, onClose, onOpenSettings }: SideMenuProps) {
       {
         text: "Log Out",
         style: "destructive",
-        onPress: () => {
-          logout();
+        onPress: async () => {
+          await logout();
           router.replace("/");
         },
       },
