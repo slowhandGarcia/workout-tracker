@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import type { SetEntry, Workout, WorkoutExercise } from "@/types";
+import type { SetEntry, Workout, WorkoutExercise, WeightUnit } from "@/types";
 
 interface WorkoutStore {
   workouts: Workout[];
@@ -22,6 +22,12 @@ interface WorkoutStore {
   deleteWorkout: (workoutId: string) => void;
   addWorkoutImages: (workoutId: string, uris: string[]) => void;
   removeWorkoutImage: (workoutId: string, index: number) => void;
+  setBodyWeight: (
+    workoutId: string,
+    bodyWeight: number | undefined,
+    weightUnit: WeightUnit
+  ) => void;
+  clearAllWorkouts: () => void;
 }
 
 const newId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -160,16 +166,29 @@ export const useWorkoutStore = create<WorkoutStore>()(
               : { ...w, images: w.images.filter((_, i) => i !== index) }
           ),
         })),
+
+      setBodyWeight: (workoutId, bodyWeight, weightUnit) =>
+        set((state) => ({
+          workouts: state.workouts.map((w) =>
+            w.id !== workoutId ? w : { ...w, bodyWeight, weightUnit }
+          ),
+        })),
+
+      clearAllWorkouts: () => set({ workouts: [], activeWorkoutId: null }),
     }),
     {
       name: "workout-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      version: 1,
+      version: 2,
       migrate: (persistedState) => {
         const state = persistedState as WorkoutStore;
         return {
           ...state,
-          workouts: state.workouts.map((w) => ({ ...w, images: w.images ?? [] })),
+          workouts: state.workouts.map((w) => ({
+            ...w,
+            images: w.images ?? [],
+            weightUnit: w.weightUnit ?? "kg",
+          })),
         };
       },
     }

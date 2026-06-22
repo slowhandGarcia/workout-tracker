@@ -12,6 +12,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useThemeColors } from "@/store/useThemeStore";
 import type { Comment } from "@/types";
 
 interface CommentModalProps {
@@ -40,6 +41,7 @@ export function CommentModal({
   onSendComment,
 }: CommentModalProps) {
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const [text, setText] = useState("");
   const inputRef = useRef<TextInput>(null);
   const listRef = useRef<FlatList>(null);
@@ -63,10 +65,12 @@ export function CommentModal({
           button below can be positioned from the true screen edge using
           insets.top directly without SafeAreaView padding being applied
           twice. */}
-      <View className="flex-1 bg-gray-900">
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <SafeAreaView className="flex-1" edges={["top", "bottom"]}>
           <View className="items-center py-3">
-            <Text className="text-white text-base font-semibold">Comments</Text>
+            <Text className="text-base font-semibold" style={{ color: colors.text }}>
+              Comments
+            </Text>
           </View>
 
           <KeyboardAvoidingView
@@ -87,43 +91,51 @@ export function CommentModal({
                   </View>
                   <View className="flex-1">
                     <View className="flex-row items-center gap-2">
-                      <Text className="text-white font-semibold text-sm">
+                      <Text className="font-semibold text-sm" style={{ color: colors.text }}>
                         {item.username}
                       </Text>
-                      <Text className="text-gray-500 text-xs">
+                      <Text className="text-xs" style={{ color: colors.muted }}>
                         {formatRelativeTime(item.createdAt)}
                       </Text>
                     </View>
-                    <Text className="text-gray-200 mt-0.5">{item.text}</Text>
+                    <Text className="mt-0.5" style={{ color: colors.text }}>
+                      {item.text}
+                    </Text>
                   </View>
                 </View>
               )}
               ListEmptyComponent={
                 <View className="items-center mt-16">
-                  <Ionicons name="chatbubble-outline" size={32} color="#4b5563" />
-                  <Text className="text-gray-400 mt-3">No comments yet.</Text>
-                  <Text className="text-gray-500 text-sm">Be the first to comment.</Text>
+                  <Ionicons name="chatbubble-outline" size={32} color={colors.muted} />
+                  <Text className="mt-3" style={{ color: colors.muted }}>
+                    No comments yet.
+                  </Text>
+                  <Text className="text-sm" style={{ color: colors.muted }}>
+                    Be the first to comment.
+                  </Text>
                 </View>
               }
             />
 
-            <View className="flex-row items-center gap-2 px-4 py-3 border-t border-gray-800">
+            <View
+              className="flex-row items-center gap-2 px-4 py-3 border-t"
+              style={{ borderColor: colors.border }}
+            >
               <TextInput
                 ref={inputRef}
                 value={text}
                 onChangeText={setText}
                 placeholder="Add a comment..."
-                placeholderTextColor="#6b7280"
+                placeholderTextColor={colors.placeholder}
                 multiline
-                className="flex-1 text-white bg-gray-800 rounded-2xl px-4 py-2.5"
-                style={{ maxHeight: 100 }}
+                className="flex-1 rounded-2xl px-4 py-2.5"
+                style={{ maxHeight: 100, backgroundColor: colors.surface, color: colors.text }}
               />
               <Pressable
                 onPress={handleSend}
                 disabled={text.trim().length === 0}
-                className={`w-11 h-11 rounded-full items-center justify-center ${
-                  text.trim().length > 0 ? "bg-blue-600" : "bg-gray-700"
-                }`}
+                className="w-11 h-11 rounded-full items-center justify-center"
+                style={{ backgroundColor: text.trim().length > 0 ? "#2563eb" : colors.surface }}
               >
                 <Ionicons name="send" size={18} color="#ffffff" />
               </Pressable>

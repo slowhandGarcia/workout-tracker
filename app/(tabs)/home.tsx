@@ -3,12 +3,14 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useWorkoutStore } from "@/store/useWorkoutStore";
+import { useThemeColors } from "@/store/useThemeStore";
 import type { Workout } from "@/types";
 
 export default function HomeScreen() {
   const workouts = useWorkoutStore((s) => s.workouts);
   const startWorkout = useWorkoutStore((s) => s.startWorkout);
   const deleteWorkout = useWorkoutStore((s) => s.deleteWorkout);
+  const colors = useThemeColors();
 
   const recent = workouts.slice(0, 5);
 
@@ -29,7 +31,10 @@ export default function HomeScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white px-4 pt-4">
+    <View
+      className="flex-1 px-4 pt-4"
+      style={{ backgroundColor: colors.background }}
+    >
       <Pressable
         onPress={onStartWorkout}
         className="bg-blue-600 rounded-xl py-4 items-center mb-6 active:opacity-80"
@@ -37,22 +42,29 @@ export default function HomeScreen() {
         <Text className="text-white text-lg font-semibold">Start New Workout</Text>
       </Pressable>
 
-      <Text className="text-base font-semibold text-gray-500 mb-2">Recent Workouts</Text>
+      <Text className="text-base font-semibold mb-2" style={{ color: colors.muted }}>
+        Recent Workouts
+      </Text>
 
       <FlatList
         data={recent}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
-          <Text className="text-gray-400">No workouts logged yet.</Text>
+          <Text style={{ color: colors.muted }}>No workouts logged yet.</Text>
         }
         renderItem={({ item }) => (
-          <View className="border border-gray-200 rounded-lg p-4 mb-3 flex-row items-center">
+          <View
+            className="rounded-lg p-4 mb-3 flex-row items-center border"
+            style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+          >
             <Pressable
               onPress={() => router.push(`/workout/${item.id}`)}
               className="flex-1"
             >
-              <Text className="text-base font-medium">{item.name}</Text>
-              <Text className="text-gray-400 text-sm">
+              <Text className="text-base font-medium" style={{ color: colors.text }}>
+                {item.name}
+              </Text>
+              <Text className="text-sm" style={{ color: colors.muted }}>
                 {new Date(item.date).toLocaleString()}
               </Text>
             </Pressable>

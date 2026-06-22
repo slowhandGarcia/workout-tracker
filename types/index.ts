@@ -35,7 +35,11 @@ export interface Workout {
   exercises: WorkoutExercise[];
   completedAt?: string; // ISO string, undefined while in progress
   images: string[];
+  bodyWeight?: number;
+  weightUnit?: WeightUnit;
 }
+
+export type WeightUnit = "kg" | "lbs";
 
 export interface Comment {
   id: string;

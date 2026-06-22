@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -16,13 +16,24 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useWorkoutStore } from "@/store/useWorkoutStore";
 import { useExerciseStore } from "@/store/useExerciseStore";
+import { useThemeColors } from "@/store/useThemeStore";
 import { ExercisePickerModal } from "@/components/ExercisePickerModal";
 import { FullScreenImageViewer } from "@/components/FullScreenImageViewer";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { SwipeableRow } from "@/components/SwipeableRow";
+import type { WeightUnit } from "@/types";
+
+const KG_TO_LBS = 2.20462;
+
+function convertWeight(value: number, from: WeightUnit, to: WeightUnit): number {
+  if (from === to) return value;
+  const converted = from === "kg" ? value * KG_TO_LBS : value / KG_TO_LBS;
+  return Math.round(converted * 10) / 10;
+}
 
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const colors = useThemeColors();
   const workout = useWorkoutStore((s) => s.workouts.find((w) => w.id === id));
   const addSet = useWorkoutStore((s) => s.addSet);
   const updateSet = useWorkoutStore((s) => s.updateSet);
@@ -33,10 +44,21 @@ export default function WorkoutDetailScreen() {
   const deleteWorkout = useWorkoutStore((s) => s.deleteWorkout);
   const addWorkoutImages = useWorkoutStore((s) => s.addWorkoutImages);
   const removeWorkoutImage = useWorkoutStore((s) => s.removeWorkoutImage);
+  const setBodyWeight = useWorkoutStore((s) => s.setBodyWeight);
   const exercises = useExerciseStore((s) => s.exercises);
   const [isPickerVisible, setIsPickerVisible] = useState(false);
   const [isViewerVisible, setIsViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [weightText, setWeightText] = useState(() =>
+    workout?.bodyWeight !== undefined ? String(workout.bodyWeight) : ""
+  );
+
+  // Re-sync the raw text only when switching to a different workout, not on
+  // every store update — otherwise typing a trailing "." would immediately
+  // get round-tripped through Number() and stripped back to an integer.
+  useEffect(() => {
+    setWeightText(workout?.bodyWeight !== undefined ? String(workout.bodyWeight) : "");
+  }, [workout?.id]);
 
   const openViewer = (index: number) => {
     setViewerIndex(index);
@@ -141,17 +163,54 @@ export default function WorkoutDetailScreen() {
     );
   };
 
+  const handleWeightChange = (text: string) => {
+    // Allow only digits with at most one decimal point (e.g. "75", "75.",
+    // "75.5"), so the field can hold valid intermediate typing states.
+    if (!/^\d*\.?\d*$/.test(text)) return;
+    setWeightText(text);
+
+    if (!workout) return;
+    const unit = workout.weightUnit ?? "kg";
+    if (text === "" || text === ".") {
+      setBodyWeight(workout.id, undefined, unit);
+      return;
+    }
+    const parsed = parseFloat(text);
+    if (!isNaN(parsed)) {
+      setBodyWeight(workout.id, parsed, unit);
+    }
+  };
+
+  const handleUnitChange = (newUnit: WeightUnit) => {
+    if (!workout) return;
+    const currentUnit = workout.weightUnit ?? "kg";
+    if (newUnit === currentUnit) return;
+    const converted =
+      workout.bodyWeight !== undefined
+        ? convertWeight(workout.bodyWeight, currentUnit, newUnit)
+        : undefined;
+    setBodyWeight(workout.id, converted, newUnit);
+    setWeightText(converted !== undefined ? String(converted) : "");
+  };
+
   if (!workout) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View
+        className="flex-1 items-center justify-center"
+        style={{ backgroundColor: colors.background }}
+      >
         <Stack.Screen options={{ title: "Workout Details" }} />
-        <Text className="text-gray-400">Workout not found.</Text>
+        <Text style={{ color: colors.muted }}>Workout not found.</Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["bottom"]}>
+    <SafeAreaView
+      className="flex-1"
+      edges={["bottom"]}
+      style={{ backgroundColor: colors.background }}
+    >
       <Stack.Screen
         options={{ title: workout.completedAt ? "Workout Details" : "New Workout" }}
       />
@@ -160,7 +219,64 @@ export default function WorkoutDetailScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View className="flex-1 px-4 pt-4">
-          <Text className="text-xl font-bold mb-4">{workout.name}</Text>
+          <Text className="text-xl font-bold mb-4" style={{ color: colors.text }}>
+            {workout.name}
+          </Text>
+
+          <View className="mb-4">
+            <Text className="text-sm font-semibold mb-2" style={{ color: colors.muted }}>
+              Body Weight
+            </Text>
+            {workout.completedAt ? (
+              <View
+                className="rounded-lg px-3 py-2.5 border flex-row items-center"
+                style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+              >
+                <Ionicons name="body-outline" size={16} color={colors.muted} />
+                <Text className="ml-2" style={{ color: colors.text }}>
+                  {workout.bodyWeight !== undefined
+                    ? `${workout.bodyWeight} ${workout.weightUnit ?? "kg"}`
+                    : "Not recorded"}
+                </Text>
+              </View>
+            ) : (
+              <View className="flex-row gap-2">
+                <TextInput
+                  className="flex-1 rounded-lg px-3 py-2.5 border"
+                  style={{ borderColor: colors.border, color: colors.text }}
+                  placeholderTextColor={colors.placeholder}
+                  keyboardType="decimal-pad"
+                  inputMode="decimal"
+                  placeholder="Enter your current weight"
+                  value={weightText}
+                  onChangeText={handleWeightChange}
+                />
+                <View
+                  className="flex-row rounded-lg border overflow-hidden"
+                  style={{ borderColor: colors.border }}
+                >
+                  {(["kg", "lbs"] as const).map((unit) => {
+                    const isActive = (workout.weightUnit ?? "kg") === unit;
+                    return (
+                      <Pressable
+                        key={unit}
+                        onPress={() => handleUnitChange(unit)}
+                        className="px-3 items-center justify-center"
+                        style={{ backgroundColor: isActive ? "#2563eb" : colors.surface }}
+                      >
+                        <Text
+                          className="text-sm font-medium"
+                          style={{ color: isActive ? "#ffffff" : colors.muted }}
+                        >
+                          {unit}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+          </View>
 
           <FlatList
             className="flex-1"
@@ -170,10 +286,18 @@ export default function WorkoutDetailScreen() {
             renderItem={({ item }) => {
               const exercise = exercises.find((e) => e.id === item.exerciseId);
               return (
-                <View className="border border-gray-200 rounded-lg p-3 mb-3">
+                <View
+                  className="rounded-lg p-3 mb-3 border"
+                  style={{ borderColor: colors.border }}
+                >
                   <SwipeableRow onDelete={() => handleDeleteExercise(workout.id, item.id)}>
-                    <View className="flex-row items-center justify-between mb-2 bg-white">
-                      <Text className="font-semibold">{exercise?.name ?? "Unknown"}</Text>
+                    <View
+                      className="flex-row items-center justify-between mb-2"
+                      style={{ backgroundColor: colors.surface }}
+                    >
+                      <Text className="font-semibold" style={{ color: colors.text }}>
+                        {exercise?.name ?? "Unknown"}
+                      </Text>
                       <Pressable
                         onPress={() => handleDeleteExercise(workout.id, item.id)}
                         hitSlop={8}
@@ -187,10 +311,17 @@ export default function WorkoutDetailScreen() {
                       key={set.id}
                       onDelete={() => handleDeleteSet(workout.id, item.id, set.id)}
                     >
-                      <View className="flex-row items-center gap-2 mb-2 bg-white">
-                        <Text className="w-6 text-gray-400">{idx + 1}</Text>
+                      <View
+                        className="flex-row items-center gap-2 mb-2"
+                        style={{ backgroundColor: colors.surface }}
+                      >
+                        <Text className="w-6" style={{ color: colors.muted }}>
+                          {idx + 1}
+                        </Text>
                         <TextInput
-                          className="border border-gray-200 rounded px-2 py-1 w-16 text-center"
+                          className="rounded px-2 py-1 w-16 text-center border"
+                          style={{ borderColor: colors.border, color: colors.text }}
+                          placeholderTextColor={colors.placeholder}
                           keyboardType="numeric"
                           placeholder="lbs"
                           value={set.weight ? String(set.weight) : ""}
@@ -199,7 +330,9 @@ export default function WorkoutDetailScreen() {
                           }
                         />
                         <TextInput
-                          className="border border-gray-200 rounded px-2 py-1 w-16 text-center"
+                          className="rounded px-2 py-1 w-16 text-center border"
+                          style={{ borderColor: colors.border, color: colors.text }}
+                          placeholderTextColor={colors.placeholder}
                           keyboardType="numeric"
                           placeholder="reps"
                           value={set.reps ? String(set.reps) : ""}
@@ -224,7 +357,9 @@ export default function WorkoutDetailScreen() {
               );
             }}
             ListEmptyComponent={
-              <Text className="text-gray-400 mb-3">No exercises added yet.</Text>
+              <Text className="mb-3" style={{ color: colors.muted }}>
+                No exercises added yet.
+              </Text>
             }
             contentContainerStyle={{ paddingBottom: 12 }}
           />

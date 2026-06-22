@@ -3,6 +3,7 @@ import { View, Text, FlatList, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { usePostStore } from "@/store/usePostStore";
+import { useThemeColors } from "@/store/useThemeStore";
 import { PostCard } from "@/components/PostCard";
 import { NewPostModal } from "@/components/NewPostModal";
 import { CommentModal } from "@/components/CommentModal";
@@ -14,6 +15,7 @@ export default function FeedScreen() {
   const likePost = usePostStore((s) => s.likePost);
   const deletePost = usePostStore((s) => s.deletePost);
   const addComment = usePostStore((s) => s.addComment);
+  const colors = useThemeColors();
 
   const [isComposerVisible, setIsComposerVisible] = useState(false);
   const [viewerImages, setViewerImages] = useState<string[]>([]);
@@ -37,11 +39,16 @@ export default function FeedScreen() {
   };
 
   return (
-    <View className="flex-1 bg-gray-900">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <FlatList
         data={posts}
         keyExtractor={(post) => post.id}
-        contentContainerStyle={{ paddingTop: 16, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingTop: 4, paddingBottom: 100 }}
+        ListHeaderComponent={
+          <Text className="text-sm px-4 pt-2 pb-3" style={{ color: colors.muted }}>
+            Show everyone the awesome progress you are making!
+          </Text>
+        }
         renderItem={({ item }) => (
           <PostCard
             post={item}
@@ -53,8 +60,8 @@ export default function FeedScreen() {
         )}
         ListEmptyComponent={
           <View className="items-center mt-20 px-8">
-            <Ionicons name="people-outline" size={40} color="#4b5563" />
-            <Text className="text-gray-400 text-center mt-3">
+            <Ionicons name="people-outline" size={40} color={colors.muted} />
+            <Text className="text-center mt-3" style={{ color: colors.muted }}>
               No posts yet. Share something with the community!
             </Text>
           </View>

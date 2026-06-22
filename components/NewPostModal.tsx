@@ -15,6 +15,8 @@ import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useThemeColors } from "@/store/useThemeStore";
+
 interface NewPostModalProps {
   visible: boolean;
   onClose: () => void;
@@ -22,6 +24,7 @@ interface NewPostModalProps {
 }
 
 export function NewPostModal({ visible, onClose, onPost }: NewPostModalProps) {
+  const colors = useThemeColors();
   const [text, setText] = useState("");
   const [images, setImages] = useState<string[]>([]);
 
@@ -94,8 +97,12 @@ export function NewPostModal({ visible, onClose, onPost }: NewPostModalProps) {
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
-      <SafeAreaView className="flex-1 bg-gray-900" edges={["top", "bottom"]}>
-        <Text className="text-white text-base font-semibold text-center py-3">
+      <SafeAreaView
+        className="flex-1"
+        edges={["top", "bottom"]}
+        style={{ backgroundColor: colors.background }}
+      >
+        <Text className="text-base font-semibold text-center py-3" style={{ color: colors.text }}>
           New Post
         </Text>
 
@@ -108,10 +115,10 @@ export function NewPostModal({ visible, onClose, onPost }: NewPostModalProps) {
               value={text}
               onChangeText={setText}
               placeholder="What's on your mind?"
-              placeholderTextColor="#6b7280"
+              placeholderTextColor={colors.placeholder}
               multiline
-              className="text-white text-base mb-4"
-              style={{ minHeight: 100, textAlignVertical: "top" }}
+              className="text-base mb-4"
+              style={{ minHeight: 100, textAlignVertical: "top", color: colors.text }}
             />
 
             <FlatList
@@ -139,10 +146,11 @@ export function NewPostModal({ visible, onClose, onPost }: NewPostModalProps) {
               ListFooterComponent={
                 <Pressable
                   onPress={handleAddPhoto}
-                  className="w-20 h-20 rounded-xl border border-dashed border-gray-600 items-center justify-center"
+                  className="w-20 h-20 rounded-xl border border-dashed items-center justify-center"
+                  style={{ borderColor: colors.border }}
                 >
-                  <Ionicons name="camera" size={22} color="#60a5fa" />
-                  <Text className="text-blue-400 text-xs mt-1">Add</Text>
+                  <Ionicons name="camera" size={22} color="#2563eb" />
+                  <Text className="text-blue-600 text-xs mt-1">Add</Text>
                 </Pressable>
               }
             />
@@ -151,21 +159,22 @@ export function NewPostModal({ visible, onClose, onPost }: NewPostModalProps) {
           <View className="flex-row gap-3 px-4 pt-3 pb-3">
             <Pressable
               onPress={handleClose}
-              className="flex-1 border border-gray-600 rounded-xl py-3.5 items-center"
+              className="flex-1 rounded-xl py-3.5 items-center border"
+              style={{ borderColor: colors.border }}
             >
-              <Text className="text-gray-200 text-base font-semibold">Cancel</Text>
+              <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                Cancel
+              </Text>
             </Pressable>
             <Pressable
               onPress={handlePost}
               disabled={!canPost}
-              className={`flex-1 rounded-xl py-3.5 items-center ${
-                canPost ? "bg-blue-600" : "bg-gray-700"
-              }`}
+              className="flex-1 rounded-xl py-3.5 items-center"
+              style={{ backgroundColor: canPost ? "#2563eb" : colors.surface }}
             >
               <Text
-                className={`text-base font-semibold ${
-                  canPost ? "text-white" : "text-gray-500"
-                }`}
+                className="text-base font-semibold"
+                style={{ color: canPost ? "#ffffff" : colors.muted }}
               >
                 Post
               </Text>

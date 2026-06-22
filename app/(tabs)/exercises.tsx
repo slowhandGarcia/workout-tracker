@@ -4,10 +4,12 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useExerciseStore } from "@/store/useExerciseStore";
+import { useThemeColors } from "@/store/useThemeStore";
 import { ExercisePickerModal } from "@/components/ExercisePickerModal";
 
 export default function ExercisesScreen() {
   const exercises = useExerciseStore((s) => s.exercises);
+  const colors = useThemeColors();
   const [query, setQuery] = useState("");
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
 
@@ -18,18 +20,23 @@ export default function ExercisesScreen() {
   }, [exercises, query]);
 
   return (
-    <View className="flex-1 bg-white px-4 pt-4">
-      <View className="flex-row items-center border border-gray-200 rounded-lg px-3 mb-4">
-        <Ionicons name="search" size={18} color="#9ca3af" />
+    <View className="flex-1 px-4 pt-4" style={{ backgroundColor: colors.background }}>
+      <View
+        className="flex-row items-center rounded-lg px-3 mb-4 border"
+        style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+      >
+        <Ionicons name="search" size={18} color={colors.placeholder} />
         <TextInput
           value={query}
           onChangeText={setQuery}
           placeholder="Search exercises"
+          placeholderTextColor={colors.placeholder}
           className="flex-1 py-2 px-2"
+          style={{ color: colors.text }}
         />
         {query.length > 0 && (
           <Pressable onPress={() => setQuery("")} hitSlop={8}>
-            <Ionicons name="close-circle" size={18} color="#9ca3af" />
+            <Ionicons name="close-circle" size={18} color={colors.placeholder} />
           </Pressable>
         )}
       </View>
@@ -41,14 +48,19 @@ export default function ExercisesScreen() {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => router.push(`/exercise/${item.id}`)}
-            className="border border-gray-200 rounded-lg p-4 mb-3 flex-row justify-between items-center"
+            className="rounded-lg p-4 mb-3 flex-row justify-between items-center border"
+            style={{ backgroundColor: colors.surface, borderColor: colors.border }}
           >
-            <Text className="text-base font-medium">{item.name}</Text>
-            <Text className="text-gray-400 text-sm capitalize">{item.muscleGroup}</Text>
+            <Text className="text-base font-medium" style={{ color: colors.text }}>
+              {item.name}
+            </Text>
+            <Text className="text-sm capitalize" style={{ color: colors.muted }}>
+              {item.muscleGroup}
+            </Text>
           </Pressable>
         )}
         ListEmptyComponent={
-          <Text className="text-gray-400 text-center mt-4">
+          <Text className="text-center mt-4" style={{ color: colors.muted }}>
             No exercises match "{query}"
           </Text>
         }

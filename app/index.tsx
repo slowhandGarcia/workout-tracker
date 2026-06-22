@@ -11,7 +11,11 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { useAuthStore } from "@/store/useAuthStore";
+
 export default function WelcomeScreen() {
+  const setGuest = useAuthStore((s) => s.setGuest);
+
   const logoOpacity = useSharedValue(0);
   const logoScale = useSharedValue(0.9);
   const textOpacity = useSharedValue(0);
@@ -70,12 +74,33 @@ export default function WelcomeScreen() {
         </View>
 
         <Animated.View style={buttonStyle}>
-          <Pressable
-            onPress={() => router.replace("/(tabs)/home")}
-            className="bg-blue-600 rounded-2xl py-5 items-center active:opacity-80"
-          >
-            <Text className="text-white text-xl font-bold tracking-wide">Get Started</Text>
-          </Pressable>
+          <View className="gap-3">
+            <Pressable
+              onPress={() => {
+                setGuest(true);
+                router.replace("/(tabs)/home");
+              }}
+              className="bg-blue-600 rounded-2xl py-5 items-center active:opacity-80"
+            >
+              <Text className="text-white text-xl font-bold tracking-wide">
+                Get Started (Guest)
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push("/auth/signup")}
+              className="bg-white rounded-2xl py-5 items-center active:opacity-80"
+            >
+              <Text className="text-black text-xl font-bold tracking-wide">Sign Up</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push("/auth/login")}
+              className="bg-transparent border-2 border-gray-600 rounded-2xl py-5 items-center active:opacity-80"
+            >
+              <Text className="text-white text-xl font-bold tracking-wide">Log In</Text>
+            </Pressable>
+          </View>
         </Animated.View>
       </SafeAreaView>
     </LinearGradient>

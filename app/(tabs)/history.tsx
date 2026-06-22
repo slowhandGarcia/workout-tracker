@@ -3,12 +3,14 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useWorkoutStore } from "@/store/useWorkoutStore";
+import { useThemeColors } from "@/store/useThemeStore";
 import type { Workout } from "@/types";
 
 export default function HistoryScreen() {
   const workouts = useWorkoutStore((s) => s.workouts);
   const deleteWorkout = useWorkoutStore((s) => s.deleteWorkout);
   const completed = workouts.filter((w) => w.completedAt);
+  const colors = useThemeColors();
 
   const confirmDelete = (workout: Workout) => {
     Alert.alert("Delete this workout?", workout.name, [
@@ -22,23 +24,31 @@ export default function HistoryScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white px-4 pt-4">
+    <View className="flex-1 px-4 pt-4" style={{ backgroundColor: colors.background }}>
       <FlatList
         data={completed}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
-          <Text className="text-gray-400">No completed workouts yet.</Text>
+          <Text style={{ color: colors.muted }}>No completed workouts yet.</Text>
         }
         renderItem={({ item }) => (
-          <View className="border border-gray-200 rounded-lg p-4 mb-3 flex-row items-center">
+          <View
+            className="rounded-lg p-4 mb-3 flex-row items-center border"
+            style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+          >
             <Pressable
               onPress={() => router.push(`/workout/${item.id}`)}
               className="flex-1"
             >
-              <Text className="text-base font-medium">{item.name}</Text>
-              <Text className="text-gray-400 text-sm">
+              <Text className="text-base font-medium" style={{ color: colors.text }}>
+                {item.name}
+              </Text>
+              <Text className="text-sm" style={{ color: colors.muted }}>
                 {new Date(item.date).toLocaleDateString()} ·{" "}
                 {item.exercises.length} exercises
+                {item.bodyWeight !== undefined
+                  ? ` · ${item.bodyWeight} ${item.weightUnit ?? "kg"}`
+                  : ""}
               </Text>
             </Pressable>
             <Pressable

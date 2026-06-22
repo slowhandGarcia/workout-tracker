@@ -2,6 +2,7 @@ import { View, Text, Pressable, FlatList } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useThemeColors } from "@/store/useThemeStore";
 import type { Post } from "@/types";
 
 interface PostCardProps {
@@ -31,23 +32,32 @@ export function PostCard({
   onPressComment,
   onLongPress,
 }: PostCardProps) {
+  const colors = useThemeColors();
+
   return (
     <Pressable
       onLongPress={onLongPress}
-      className="bg-gray-800 rounded-2xl p-4 mb-4 mx-4"
+      className="rounded-2xl p-4 mb-4 mx-4 border"
+      style={{ backgroundColor: colors.surface, borderColor: colors.border }}
     >
       <View className="flex-row items-center mb-3">
         <View className="w-9 h-9 rounded-full bg-blue-600 items-center justify-center mr-3">
           <Text className="text-white font-bold">{post.username.charAt(0)}</Text>
         </View>
         <View>
-          <Text className="text-white font-semibold">{post.username}</Text>
-          <Text className="text-gray-400 text-xs">{formatRelativeTime(post.createdAt)}</Text>
+          <Text className="font-semibold" style={{ color: colors.text }}>
+            {post.username}
+          </Text>
+          <Text className="text-xs" style={{ color: colors.muted }}>
+            {formatRelativeTime(post.createdAt)}
+          </Text>
         </View>
       </View>
 
       {post.text.length > 0 && (
-        <Text className="text-gray-100 mb-3 leading-relaxed">{post.text}</Text>
+        <Text className="mb-3 leading-relaxed" style={{ color: colors.text }}>
+          {post.text}
+        </Text>
       )}
 
       {post.images.length > 0 && (
@@ -75,13 +85,17 @@ export function PostCard({
           <Ionicons
             name={post.likedByMe ? "heart" : "heart-outline"}
             size={20}
-            color={post.likedByMe ? "#ef4444" : "#9ca3af"}
+            color={post.likedByMe ? "#ef4444" : colors.muted}
           />
-          <Text className="text-gray-400 text-sm">{post.likeCount}</Text>
+          <Text className="text-sm" style={{ color: colors.muted }}>
+            {post.likeCount}
+          </Text>
         </Pressable>
         <Pressable onPress={onPressComment} className="flex-row items-center gap-1.5">
-          <Ionicons name="chatbubble-outline" size={18} color="#9ca3af" />
-          <Text className="text-gray-400 text-sm">{post.comments.length}</Text>
+          <Ionicons name="chatbubble-outline" size={18} color={colors.muted} />
+          <Text className="text-sm" style={{ color: colors.muted }}>
+            {post.comments.length}
+          </Text>
         </Pressable>
       </View>
     </Pressable>
