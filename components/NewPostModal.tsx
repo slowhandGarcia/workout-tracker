@@ -9,6 +9,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -20,13 +21,14 @@ import { useThemeColors } from "@/store/useThemeStore";
 interface NewPostModalProps {
   visible: boolean;
   onClose: () => void;
-  onPost: (text: string, images: string[]) => void;
+  onPost: (text: string, images: string[]) => Promise<{ success: boolean; error?: string }>;
 }
 
 export function NewPostModal({ visible, onClose, onPost }: NewPostModalProps) {
   const colors = useThemeColors();
   const [text, setText] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const reset = () => {
     setText("");
@@ -85,15 +87,24 @@ export function NewPostModal({ visible, onClose, onPost }: NewPostModalProps) {
     ]);
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
     const trimmed = text.trim();
     if (!trimmed && images.length === 0) return;
-    onPost(trimmed, images);
+
+    setIsSubmitting(true);
+    const result = await onPost(trimmed, images);
+    setIsSubmitting(false);
+
+    if (!result.success) {
+      Alert.alert("Couldn't post", result.error ?? "Something went wrong. Please try again.");
+      return;
+    }
     reset();
     onClose();
   };
 
-  const canPost = text.trim().length > 0 || images.length > 0;
+  const hasContent = text.trim().length > 0 || images.length > 0;
+  const canPost = hasContent && !isSubmitting;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
@@ -170,14 +181,18 @@ export function NewPostModal({ visible, onClose, onPost }: NewPostModalProps) {
               onPress={handlePost}
               disabled={!canPost}
               className="flex-1 rounded-xl py-3.5 items-center"
-              style={{ backgroundColor: canPost ? "#2563eb" : colors.surface }}
+              style={{ backgroundColor: hasContent ? "#2563eb" : colors.surface }}
             >
-              <Text
-                className="text-base font-semibold"
-                style={{ color: canPost ? "#ffffff" : colors.muted }}
-              >
-                Post
-              </Text>
+              {isSubmitting ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text
+                  className="text-base font-semibold"
+                  style={{ color: hasContent ? "#ffffff" : colors.muted }}
+                >
+                  Post
+                </Text>
+              )}
             </Pressable>
           </View>
         </KeyboardAvoidingView>

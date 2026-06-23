@@ -50,6 +50,7 @@ export interface Comment {
 
 export interface Post {
   id: string;
+  authorId: number;
   username: string;
   text: string;
   images: string[];

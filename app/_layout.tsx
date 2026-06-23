@@ -37,6 +37,8 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="auth/signup" />
           <Stack.Screen name="auth/login" />
+          <Stack.Screen name="auth/forgot-password" />
+          <Stack.Screen name="auth/reset-password" />
           <Stack.Screen name="workout/[id]" options={{ headerShown: true }} />
           <Stack.Screen name="exercise/[id]" options={{ headerShown: true }} />
         </Stack>

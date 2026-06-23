@@ -8,16 +8,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function LogInScreen() {
   const login = useAuthStore((s) => s.login);
+  const { message } = useLocalSearchParams<{ message?: string }>();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,6 +58,13 @@ export default function LogInScreen() {
             Log in to access your account.
           </Text>
 
+          {message && (
+            <View className="bg-blue-600/10 border border-blue-600 rounded-xl px-4 py-3 mb-4 flex-row items-center gap-2">
+              <Ionicons name="information-circle" size={18} color="#3b82f6" />
+              <Text className="text-blue-500 text-sm flex-1">{message}</Text>
+            </View>
+          )}
+
           {error && (
             <View className="bg-red-600/10 border border-red-600 rounded-xl px-4 py-3 mb-4">
               {error.split("\n").map((line, index) => (
@@ -95,9 +102,7 @@ export default function LogInScreen() {
           />
 
           <Pressable
-            onPress={() =>
-              Alert.alert("Forgot Password", "Password reset is coming soon.")
-            }
+            onPress={() => router.push("/auth/forgot-password")}
             className="self-end mb-6"
             hitSlop={8}
           >

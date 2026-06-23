@@ -7,10 +7,12 @@ import type { Post } from "@/types";
 
 interface PostCardProps {
   post: Post;
+  currentUserId: number | undefined;
   onPressPhoto: (index: number) => void;
   onToggleLike: () => void;
   onPressComment: () => void;
   onLongPress: () => void;
+  onPressDelete: () => void;
 }
 
 function formatRelativeTime(iso: string) {
@@ -27,12 +29,15 @@ function formatRelativeTime(iso: string) {
 
 export function PostCard({
   post,
+  currentUserId,
   onPressPhoto,
   onToggleLike,
   onPressComment,
   onLongPress,
+  onPressDelete,
 }: PostCardProps) {
   const colors = useThemeColors();
+  const isOwnPost = currentUserId !== undefined && post.authorId === currentUserId;
 
   return (
     <Pressable
@@ -40,7 +45,18 @@ export function PostCard({
       className="rounded-2xl p-4 mb-4 mx-4 border"
       style={{ backgroundColor: colors.surface, borderColor: colors.border }}
     >
-      <View className="flex-row items-center mb-3">
+      {isOwnPost && (
+        <Pressable
+          onPress={onPressDelete}
+          hitSlop={10}
+          className="absolute top-3 right-3 w-6 h-6 rounded-full items-center justify-center z-10"
+          style={{ backgroundColor: "rgba(239, 68, 68, 0.12)" }}
+        >
+          <Ionicons name="close" size={14} color="#ef4444" />
+        </Pressable>
+      )}
+
+      <View className="flex-row items-center mb-3 pr-8">
         <View className="w-9 h-9 rounded-full bg-blue-600 items-center justify-center mr-3">
           <Text className="text-white font-bold">{post.username.charAt(0)}</Text>
         </View>

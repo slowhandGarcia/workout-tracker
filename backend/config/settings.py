@@ -121,10 +121,19 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+# Post images — saved to local disk and served by Django itself in DEBUG
+# (see config/urls.py). For production this should move to real object
+# storage (e.g. S3); local disk doesn't survive a Railway redeploy.
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -168,3 +177,19 @@ CORS_ALLOWED_ORIGINS = [
     if o
 ]
 CORS_ALLOW_ALL_ORIGINS = DEBUG
+
+
+# Email — password reset links are sent through this. In DEBUG (local dev),
+# default to printing emails to the console instead of actually sending them,
+# so password reset works out of the box with no SMTP credentials. Set
+# EMAIL_BACKEND/EMAIL_HOST/etc via env vars once a real provider is wired up.
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend"
+    if DEBUG
+    else "django.core.mail.backends.smtp.EmailBackend",
+)
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@workouttracker.local")
+
+# Base URL of the Expo app, used to build the link inside the reset email.
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8081")

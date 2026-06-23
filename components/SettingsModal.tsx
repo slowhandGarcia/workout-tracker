@@ -1,4 +1,14 @@
-import { Modal, View, Text, Pressable, Switch, ScrollView, Alert } from "react-native";
+import { useState } from "react";
+import {
+  Modal,
+  View,
+  Text,
+  Pressable,
+  Switch,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -25,7 +35,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const isGuest = useAuthStore((s) => s.isGuest);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const { name, bio, location, email, avatarUri } = useProfileStore();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const hasFilledProfile =
     !!avatarUri ||
@@ -53,6 +65,47 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const goToLogin = () => {
     onClose();
     router.push("/auth/login");
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    const result = await deleteAccount();
+    setIsDeleting(false);
+
+    if (!result.success) {
+      Alert.alert("Couldn't delete account", result.error);
+      return;
+    }
+    onClose();
+    router.replace("/");
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account?",
+      "This action is permanent. All your workouts and posts will be deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Continue",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Are you absolutely sure?",
+              "There is no undo. Your account, workouts, and posts will be gone forever.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete Forever",
+                  style: "destructive",
+                  onPress: handleDeleteAccount,
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -198,6 +251,32 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             >
               <Text className="text-base font-bold text-red-600">Log Out</Text>
             </Pressable>
+          )}
+
+          {!isGuest && (
+            <>
+              <Text className="text-sm font-semibold mb-2 mt-8" style={{ color: colors.muted }}>
+                Danger Zone
+              </Text>
+              <Pressable
+                onPress={confirmDeleteAccount}
+                disabled={isDeleting}
+                className="rounded-xl py-3.5 items-center bg-red-600 active:opacity-80 flex-row justify-center gap-2"
+                style={{ opacity: isDeleting ? 0.6 : 1 }}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <>
+                    <Ionicons name="trash" size={18} color="#ffffff" />
+                    <Text className="text-base font-bold text-white">Delete Account</Text>
+                  </>
+                )}
+              </Pressable>
+              <Text className="text-xs text-center mt-2 px-4" style={{ color: colors.muted }}>
+                This permanently deletes your account and all your data. This cannot be undone.
+              </Text>
+            </>
           )}
         </ScrollView>
       </SafeAreaView>

@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api, getApiErrorMessage, tokenStorage } from "@/lib/api";
 import { useProfileStore } from "@/store/useProfileStore";
 import { useWorkoutStore } from "@/store/useWorkoutStore";
+import { usePostStore } from "@/store/usePostStore";
 
 export interface User {
   id: number;
@@ -38,6 +39,10 @@ interface AuthStore {
   logout: () => Promise<void>;
   /** Guest wiping their local data: clear profile + all workouts, stay in guest mode. */
   resetGuestData: () => void;
+  /** Permanently deletes the account server-side (cascades to their posts/
+   *  comments/workouts there), then wipes this device's local copies of the
+   *  same data and reverts to guest mode. */
+  deleteAccount: () => Promise<AuthResult>;
 }
 
 interface ApiUser {
@@ -172,6 +177,24 @@ export const useAuthStore = create<AuthStore>()(
         useProfileStore.getState().resetProfile();
         useWorkoutStore.getState().clearAllWorkouts();
         set({ isGuest: true });
+      },
+
+      deleteAccount: async () => {
+        try {
+          await api.delete("/auth/me/");
+        } catch (error) {
+          return {
+            success: false,
+            error: getApiErrorMessage(error, "Failed to delete account. Please try again."),
+          };
+        }
+
+        await tokenStorage.clear();
+        useProfileStore.getState().resetProfile();
+        useWorkoutStore.getState().clearAllWorkouts();
+        usePostStore.getState().clearAllPosts();
+        set({ user: null, isGuest: true });
+        return { success: true };
       },
     }),
     {
