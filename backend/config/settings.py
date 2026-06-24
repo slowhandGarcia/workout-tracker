@@ -18,11 +18,20 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-me-in-production")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
+# The literal known production domain, kept as a hardcoded fallback
+# independent of whether RAILWAY_PUBLIC_DOMAIN actually gets injected (its
+# presence depends on Railway's "public networking" being enabled for this
+# service) — so a misconfigured/missing env var can't silently take the
+# whole site down with DisallowedHost or CSRF "Origin checking failed".
+RAILWAY_STATIC_DOMAIN = "workout-tracker-production-30b3.up.railway.app"
+
 ALLOWED_HOSTS = [
     h.strip() for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h
 ]
+ALLOWED_HOSTS.append(RAILWAY_STATIC_DOMAIN)
 # Railway serves the app behind a *.up.railway.app domain — allow it
-# automatically when the platform injects this variable.
+# automatically when the platform injects this variable too (covers a
+# custom domain or a Railway-assigned one that differs from the above).
 railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
 if railway_domain:
     ALLOWED_HOSTS.append(railway_domain)
@@ -34,6 +43,69 @@ if railway_domain:
 # explicit ALLOWED_HOSTS/RAILWAY_PUBLIC_DOMAIN values from above.
 if DEBUG:
     ALLOWED_HOSTS = ["*"]
+
+
+# CSRF + reverse-proxy trust — Railway terminates TLS at its edge and proxies
+# plain HTTP to this container, so without the settings below Django either
+# doesn't realize the request was actually HTTPS, or doesn't trust the
+# Origin header at all, surfacing as:
+#   "CSRF verification failed... Origin checking failed - https://<domain>
+#    does not match any trusted origins."
+# This hits django.contrib.admin and the DRF browsable API (both use
+# session+CSRF auth); the JWT-authenticated mobile API endpoints aren't
+# affected by CSRF at all (DRF only enforces it for SessionAuthentication).
+
+# Tells Django to trust the X-Forwarded-Proto header Railway's proxy sets,
+# so request.is_secure() (and anything derived from it, e.g. CSRF's own
+# scheme check) correctly evaluates to True instead of treating every
+# proxied request as plain HTTP.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
+# Required since Django 4: every full origin (scheme + host, no path) that's
+# allowed to make unsafe (POST/PUT/PATCH/DELETE) requests with cookies, e.g.
+# logging into /admin/. Both schemes are listed per the request, though in
+# practice Railway only ever serves https externally — the plain-http entry
+# is harmless and just means it's never matched.
+#
+# These two are *unconditional* — not a fallback used only when the env var
+# is unset. A previous version used `os.environ.get("CSRF_TRUSTED_ORIGINS",
+# default)`, which meant setting the env var at all (even to a slightly
+# malformed value — missing scheme, stray space, trailing slash) silently
+# discarded this known-good default and reintroduced the exact same "Origin
+# checking failed" error. Any CSRF_TRUSTED_ORIGINS env var is now purely
+# additive on top of this, never a replacement for it.
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{RAILWAY_STATIC_DOMAIN}",
+    f"http://{RAILWAY_STATIC_DOMAIN}",
+]
+if railway_domain:
+    CSRF_TRUSTED_ORIGINS += [f"https://{railway_domain}", f"http://{railway_domain}"]
+
+_extra_csrf_origins = [
+    o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+]
+for _origin in _extra_csrf_origins:
+    # Django 4+ hard-crashes at startup (SystemCheckError) if ANY entry here
+    # lacks a scheme — not a soft warning, the whole process refuses to boot.
+    # A bare-domain env var (the easy mistake to make) would otherwise take
+    # the entire site down rather than "just" leaving CSRF broken, so a
+    # missing scheme is corrected to https:// instead of passed through.
+    if not _origin.startswith(("http://", "https://")):
+        _origin = f"https://{_origin}"
+    if _origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_origin)
+
+# Cookies (session + CSRF) only sent over HTTPS once in production. Left
+# False in DEBUG so local http://127.0.0.1 dev keeps working without https.
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+
+# Redirect any stray plain-HTTP request to HTTPS in production. Safe to
+# enable here specifically because SECURE_PROXY_SSL_HEADER above means
+# Django correctly recognizes Railway-proxied requests as already secure —
+# without that, this setting alone would redirect-loop every request.
+SECURE_SSL_REDIRECT = not DEBUG
 
 
 # Application definition
