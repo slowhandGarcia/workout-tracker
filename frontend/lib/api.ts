@@ -4,27 +4,31 @@ import * as SecureStore from "expo-secure-store";
 
 // HOW TO POINT THIS AT YOUR BACKEND
 // ----------------------------------
-// 127.0.0.1 only ever means "this device" — on a physical phone running
-// Expo Go, that's the phone itself, not your computer, which is why it
-// shows up as a generic Network Error with no server response at all.
+// EXPO_PUBLIC_API_URL always wins when set, in both dev and production —
+// it's the one knob you need for "use my local Django instead of the live
+// one" or vice versa. Set it in a `.env` file at the project root:
+//   EXPO_PUBLIC_API_URL=http://192.168.1.42:8000/api
 //
-// The default below is your computer's LAN IP instead, which works from:
-//   - a physical device on the same Wi-Fi as your computer (Expo Go)
-//   - an Android emulator
-//   - an iOS simulator
-//
-// To change it:
-//   1. Find your computer's LAN IP:
-//        macOS/Linux: ipconfig getifaddr en0   (or `ifconfig` and look for "inet")
-//        Windows:     ipconfig                  (look for "IPv4 Address")
-//   2. Either edit the fallback string below, or (preferred, no code edits)
-//      set EXPO_PUBLIC_API_URL in a `.env` file at the project root:
-//        EXPO_PUBLIC_API_URL=http://192.168.1.42:8000/api
-//   3. Make sure your phone and computer are on the same Wi-Fi network, and
-//      that `python manage.py runserver 0.0.0.0:8000` is bound to 0.0.0.0
-//      (not just 127.0.0.1) so it actually accepts connections from other
-//      devices on the network.
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://192.168.0.235:8000/api";
+// When it's unset, the default depends on __DEV__:
+//   - Dev (Expo Go / dev client): falls back to your computer's LAN IP.
+//     127.0.0.1 only ever means "this device" — on a physical phone, that's
+//     the phone itself, not your computer, which is why it shows up as a
+//     generic Network Error with no server response at all. The LAN IP
+//     fallback below works from a physical device on the same Wi-Fi, an
+//     Android emulator, or an iOS simulator. To use it:
+//       1. Find your computer's LAN IP:
+//            macOS/Linux: ipconfig getifaddr en0   (or `ifconfig`, look for "inet")
+//            Windows:     ipconfig                  (look for "IPv4 Address")
+//       2. Edit DEV_FALLBACK_API_URL below to match.
+//       3. Run `python manage.py runserver 0.0.0.0:8000` (not just 127.0.0.1)
+//          so it actually accepts connections from other devices.
+//   - Production builds: falls back to the live Railway backend, so a
+//     release build works out of the box with no env file at all.
+const DEV_FALLBACK_API_URL = "http://192.168.0.235:8000/api";
+const PRODUCTION_API_URL = "https://workout-tracker-production-30b3.up.railway.app/api";
+
+const API_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? (__DEV__ ? DEV_FALLBACK_API_URL : PRODUCTION_API_URL);
 
 const ACCESS_TOKEN_KEY = "auth_access_token";
 const REFRESH_TOKEN_KEY = "auth_refresh_token";
