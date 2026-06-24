@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { View, Text, Image, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, {
   Easing,
@@ -13,13 +14,13 @@ import Animated, {
 
 import { useAuthStore } from "@/store/useAuthStore";
 
-export default function WelcomeScreen() {
+export default function OnboardingScreen() {
   const setGuest = useAuthStore((s) => s.setGuest);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const isLoggedIn = useAuthStore((s) => s.user?.isLoggedIn ?? false);
 
-  // Skip the Welcome screen for a user who's already signed in on this
-  // device — only once persisted auth state has finished loading.
+  // Same guard as the Welcome screen: if a signed-in user somehow lands
+  // here (e.g. navigating back into a stale stack), skip straight past.
   useEffect(() => {
     if (hasHydrated && isLoggedIn) {
       router.replace("/(tabs)/home");
@@ -64,12 +65,16 @@ export default function WelcomeScreen() {
 
   return (
     <LinearGradient colors={["#1e293b", "#0f172a", "#000000"]} style={{ flex: 1 }}>
-      <SafeAreaView className="flex-1 justify-between px-6 pt-6 pb-10">
+      <SafeAreaView className="flex-1 justify-between px-6 pt-4 pb-10">
+        <Pressable onPress={() => router.back()} hitSlop={8} className="p-2 -ml-2 self-start">
+          <Ionicons name="arrow-back" size={24} color="#ffffff" />
+        </Pressable>
+
         <View className="items-center">
           <Animated.View style={logoStyle}>
             <Image
               source={require("../logo.png")}
-              className="w-[140px] h-[79px]"
+              className="w-[120px] h-[68px]"
               resizeMode="contain"
             />
           </Animated.View>
@@ -77,12 +82,11 @@ export default function WelcomeScreen() {
 
         <View className="items-center px-2">
           <Animated.View style={textStyle}>
-            <Text className="text-white text-5xl font-extrabold text-center leading-tight tracking-tight">
-              Welcome to the{"\n"}
-              <Text className="text-blue-500">EXPERIENCE!</Text>
+            <Text className="text-white text-4xl font-extrabold text-center leading-tight tracking-tight">
+              Choose Your Path
             </Text>
             <Text className="text-gray-400 text-base text-center mt-5 leading-relaxed">
-              Track your workouts. Crush your goals.{"\n"}Every rep counts.
+              Jump in as a guest, or create an account{"\n"}to save your progress everywhere.
             </Text>
           </Animated.View>
         </View>

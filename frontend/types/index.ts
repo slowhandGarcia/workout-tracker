@@ -37,6 +37,11 @@ export interface Workout {
   images: string[];
   bodyWeight?: number;
   weightUnit?: WeightUnit;
+  notes?: string;
+  // True once this workout has been successfully pushed to the backend
+  // (happens once, at finish — see useWorkoutStore.finishWorkout). Guards
+  // whether deleteWorkout needs to also call the API.
+  isSynced?: boolean;
 }
 
 export type WeightUnit = "kg" | "lbs";

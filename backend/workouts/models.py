@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class Workout(models.Model):
@@ -7,10 +8,14 @@ class Workout(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="workouts"
     )
     name = models.CharField(max_length=120)
-    date = models.DateTimeField(auto_now_add=True)
+    # Not auto_now_add: that would silently ignore the client-supplied start
+    # time and stamp every workout with its *sync* time instead (sync only
+    # happens once, at finish) — defaults to now only when the client omits it.
+    date = models.DateTimeField(default=timezone.now)
     completed_at = models.DateTimeField(null=True, blank=True)
     body_weight = models.FloatField(null=True, blank=True)
     weight_unit = models.CharField(max_length=4, default="kg")
+    notes = models.TextField(blank=True, default="")
     images = models.JSONField(default=list, blank=True)
 
     class Meta:

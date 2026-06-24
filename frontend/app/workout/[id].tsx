@@ -8,6 +8,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, router } from "expo-router";
@@ -45,10 +46,13 @@ export default function WorkoutDetailScreen() {
   const addWorkoutImages = useWorkoutStore((s) => s.addWorkoutImages);
   const removeWorkoutImage = useWorkoutStore((s) => s.removeWorkoutImage);
   const setBodyWeight = useWorkoutStore((s) => s.setBodyWeight);
+  const setNotes = useWorkoutStore((s) => s.setNotes);
   const exercises = useExerciseStore((s) => s.exercises);
   const [isPickerVisible, setIsPickerVisible] = useState(false);
   const [isViewerVisible, setIsViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [isFinishing, setIsFinishing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [weightText, setWeightText] = useState(() =>
     workout?.bodyWeight !== undefined ? String(workout.bodyWeight) : ""
   );
@@ -154,13 +158,32 @@ export default function WorkoutDetailScreen() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            deleteWorkout(workoutId);
+          onPress: async () => {
+            setIsDeleting(true);
+            const result = await deleteWorkout(workoutId);
+            setIsDeleting(false);
+            if (!result.success) {
+              Alert.alert("Couldn't delete workout", result.error);
+              return;
+            }
             router.back();
           },
         },
       ]
     );
+  };
+
+  const handleFinishWorkout = async (workoutId: string) => {
+    setIsFinishing(true);
+    const result = await finishWorkout(workoutId);
+    setIsFinishing(false);
+    if (!result.success) {
+      Alert.alert(
+        "Workout saved, but didn't sync",
+        `${result.error}\n\nIt's saved on this device — you can try again later.`
+      );
+    }
+    router.back();
   };
 
   const handleWeightChange = (text: string) => {
@@ -181,6 +204,24 @@ export default function WorkoutDetailScreen() {
     }
   };
 
+  // Explicit, controlled back navigation rather than relying on the header's
+  // implicit default back button — also gives somewhere sensible to go
+  // (Home) if this screen was somehow reached with no back history at all
+  // (e.g. a deep link), instead of being a dead end.
+  const handleGoBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/home");
+    }
+  };
+
+  const renderBackButton = () => (
+    <Pressable onPress={handleGoBack} hitSlop={12} className="px-2 -ml-2">
+      <Ionicons name="chevron-back" size={28} color={colors.text} />
+    </Pressable>
+  );
+
   const handleUnitChange = (newUnit: WeightUnit) => {
     if (!workout) return;
     const currentUnit = workout.weightUnit ?? "kg";
@@ -199,7 +240,13 @@ export default function WorkoutDetailScreen() {
         className="flex-1 items-center justify-center"
         style={{ backgroundColor: colors.background }}
       >
-        <Stack.Screen options={{ title: "Workout Details" }} />
+        <Stack.Screen
+          options={{
+            title: "Workout Details",
+            headerBackTitle: "Back",
+            headerLeft: renderBackButton,
+          }}
+        />
         <Text style={{ color: colors.muted }}>Workout not found.</Text>
       </View>
     );
@@ -212,7 +259,11 @@ export default function WorkoutDetailScreen() {
       style={{ backgroundColor: colors.background }}
     >
       <Stack.Screen
-        options={{ title: workout.completedAt ? "Workout Details" : "New Workout" }}
+        options={{
+          title: workout.completedAt ? "Workout Details" : "New Workout",
+          headerBackTitle: "Back",
+          headerLeft: renderBackButton,
+        }}
       />
       <KeyboardAvoidingView
         className="flex-1"
@@ -276,6 +327,21 @@ export default function WorkoutDetailScreen() {
                 </View>
               </View>
             )}
+          </View>
+
+          <View className="mb-4">
+            <Text className="text-sm font-semibold mb-2" style={{ color: colors.muted }}>
+              Notes
+            </Text>
+            <TextInput
+              className="rounded-lg px-3 py-2.5 border"
+              style={{ borderColor: colors.border, color: colors.text, minHeight: 44 }}
+              placeholderTextColor={colors.placeholder}
+              placeholder="How did it go?"
+              multiline
+              value={workout.notes ?? ""}
+              onChangeText={(text) => setNotes(workout.id, text)}
+            />
           </View>
 
           <FlatList
@@ -381,21 +447,30 @@ export default function WorkoutDetailScreen() {
 
             {!workout.completedAt && (
               <Pressable
-                onPress={() => {
-                  finishWorkout(workout.id);
-                  router.back();
-                }}
+                onPress={() => handleFinishWorkout(workout.id)}
+                disabled={isFinishing}
                 className="bg-blue-600 rounded-xl py-3.5 items-center"
+                style={{ opacity: isFinishing ? 0.7 : 1 }}
               >
-                <Text className="text-white text-base font-semibold">Finish Workout</Text>
+                {isFinishing ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <Text className="text-white text-base font-semibold">Finish Workout</Text>
+                )}
               </Pressable>
             )}
 
             <Pressable
               onPress={() => handleDeleteWorkout(workout.id)}
+              disabled={isDeleting}
               className="bg-red-600 rounded-xl py-3.5 items-center"
+              style={{ opacity: isDeleting ? 0.7 : 1 }}
             >
-              <Text className="text-white text-base font-semibold">Delete Workout</Text>
+              {isDeleting ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text className="text-white text-base font-semibold">Delete Workout</Text>
+              )}
             </Pressable>
           </View>
         </View>

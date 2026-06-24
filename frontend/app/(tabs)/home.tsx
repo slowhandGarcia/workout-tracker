@@ -1,4 +1,5 @@
-import { View, Text, Pressable, FlatList, Alert } from "react-native";
+import { useEffect } from "react";
+import { View, Text, Pressable, FlatList, Alert, RefreshControl } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -8,9 +9,15 @@ import type { Workout } from "@/types";
 
 export default function HomeScreen() {
   const workouts = useWorkoutStore((s) => s.workouts);
+  const isLoading = useWorkoutStore((s) => s.isLoading);
+  const fetchWorkouts = useWorkoutStore((s) => s.fetchWorkouts);
   const startWorkout = useWorkoutStore((s) => s.startWorkout);
   const deleteWorkout = useWorkoutStore((s) => s.deleteWorkout);
   const colors = useThemeColors();
+
+  useEffect(() => {
+    fetchWorkouts();
+  }, [fetchWorkouts]);
 
   const recent = workouts.slice(0, 5);
 
@@ -25,7 +32,12 @@ export default function HomeScreen() {
       {
         text: "Delete",
         style: "destructive",
-        onPress: () => deleteWorkout(workout.id),
+        onPress: async () => {
+          const result = await deleteWorkout(workout.id);
+          if (!result.success) {
+            Alert.alert("Couldn't delete workout", result.error);
+          }
+        },
       },
     ]);
   };
@@ -49,6 +61,14 @@ export default function HomeScreen() {
       <FlatList
         data={recent}
         keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={fetchWorkouts}
+            tintColor={colors.muted}
+            colors={["#2563eb"]}
+          />
+        }
         ListEmptyComponent={
           <Text style={{ color: colors.muted }}>No workouts logged yet.</Text>
         }

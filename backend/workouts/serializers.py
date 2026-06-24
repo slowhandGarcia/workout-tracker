@@ -25,10 +25,11 @@ class WorkoutSerializer(serializers.ModelSerializer):
             "completed_at",
             "body_weight",
             "weight_unit",
+            "notes",
             "images",
             "sets",
         ]
-        read_only_fields = ["id", "date"]
+        read_only_fields = ["id"]
 
     def create(self, validated_data):
         sets_data = validated_data.pop("sets", [])
