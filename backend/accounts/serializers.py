@@ -100,6 +100,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """Same as the default, but also returns the user's profile alongside
     the token pair so the frontend doesn't need a second round-trip."""
 
+    # Replaces simplejwt's "No active account found with the given credentials"
+    # with a generic message that doesn't reveal whether the email exists.
+    default_error_messages = {
+        "no_active_account": "Invalid email or password."
+    }
+
     def validate(self, attrs):
         data = super().validate(attrs)
         data["user"] = UserSerializer(self.user).data

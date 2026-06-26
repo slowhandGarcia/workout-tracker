@@ -2,12 +2,14 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
-// TEMPORARY: forced to the live Railway backend while debugging the login
-// failure there, so every build (dev or production) hits the same server
-// with no ambiguity about which backend is being tested against. This
-// drops the EXPO_PUBLIC_API_URL / dev-LAN-IP switching that was here before
-// — see git history to restore it once env-based switching comes back.
-const API_URL = "https://workout-tracker-production-30b3.up.railway.app/api";
+const PROD_URL = "https://workout-tracker-production-30b3.up.railway.app/api";
+const DEV_LOCAL_URL = "http://192.168.0.235:8000/api";
+
+// Priority: EXPO_PUBLIC_API_URL (.env) → LAN IP in dev → Railway in prod.
+// To switch backends just set/unset EXPO_PUBLIC_API_URL in frontend/.env.
+const API_URL =
+  process.env.EXPO_PUBLIC_API_URL ??
+  (__DEV__ ? DEV_LOCAL_URL : PROD_URL);
 
 const ACCESS_TOKEN_KEY = "auth_access_token";
 const REFRESH_TOKEN_KEY = "auth_refresh_token";
