@@ -26,30 +26,24 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["email", "username", "password", "password2"]
+        # ModelSerializer auto-generates UniqueValidator for every unique=True field
+        # (email and username). Setting validators=[] removes them so those errors
+        # never surface to the client. Uniqueness is checked silently in RegisterView.
+        extra_kwargs = {
+            "email": {"validators": []},
+            "username": {"validators": []},
+        }
 
     def validate_email(self, value):
-        normalized = value.strip().lower()
-        if User.objects.filter(email__iexact=normalized).exists():
-            raise serializers.ValidationError("An account with that email already exists.")
-        return normalized
-
-    def validate_username(self, value):
-        if User.objects.filter(username__iexact=value).exists():
-            raise serializers.ValidationError("That username is already taken.")
-        return value
+        return value.strip().lower()
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password2"]:
             raise serializers.ValidationError({"password2": "Passwords do not match."})
         return attrs
 
-    def create(self, validated_data):
-        validated_data.pop("password2")
-        password = validated_data.pop("password")
-        user = User(**validated_data)
-        user.set_password(password)
-        user.save()
-        return user
+    # No create() — account creation happens in ConfirmRegistrationView after
+    # the user clicks the emailed link.
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):

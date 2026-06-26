@@ -1,5 +1,29 @@
+import secrets
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
+
+
+class PendingRegistration(models.Model):
+    """Holds a not-yet-confirmed signup. Created when the user submits the
+    registration form; deleted when they click the confirmation link or it
+    expires. Keyed by email so a retry overwrites the old pending record."""
+
+    email = models.EmailField(unique=True)
+    username = models.CharField(max_length=150)
+    password_hash = models.CharField(max_length=128)
+    token = models.CharField(max_length=100, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    @staticmethod
+    def make_token() -> str:
+        return secrets.token_urlsafe(64)
+
+    @property
+    def is_expired(self) -> bool:
+        return timezone.now() > self.expires_at
 
 
 class LoginAttempt(models.Model):

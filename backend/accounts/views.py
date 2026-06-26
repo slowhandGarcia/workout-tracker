@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.utils import timezone
@@ -15,7 +16,7 @@ from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, Ou
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import LoginAttempt
+from .models import LoginAttempt, PendingRegistration
 from .serializers import (
     CustomTokenObtainPairSerializer,
     PasswordResetConfirmSerializer,
@@ -29,17 +30,125 @@ User = get_user_model()
 _MAX_ATTEMPTS = getattr(settings, "LOGIN_MAX_ATTEMPTS", 5)
 _LOCKOUT_MINUTES = getattr(settings, "LOGIN_LOCKOUT_MINUTES", 15)
 
+_REGISTER_GENERIC_MESSAGE = (
+    "If an account with this email doesn't already exist, "
+    "we've sent a confirmation link to your email."
+)
 
-class RegisterView(generics.CreateAPIView):
-    """POST /api/auth/register/ — create an account and log in immediately."""
 
-    serializer_class = RegisterSerializer
+class RegisterView(APIView):
+    """POST /api/auth/register/ — validate input, store a pending registration,
+    and email a confirmation link.
+
+    Always returns the same generic 201 response regardless of whether the
+    email is already registered, so callers can't use this endpoint to find
+    out whether an address belongs to an existing account."""
+
     permission_classes = [permissions.AllowAny]
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+
+        # Never propagate validation errors — every failure path returns the same
+        # generic 201 so callers can't probe which field (email, username, password
+        # strength, etc.) caused the rejection.
+        if not serializer.is_valid():
+            return Response({"detail": _REGISTER_GENERIC_MESSAGE}, status=status.HTTP_201_CREATED)
+
+        email = serializer.validated_data["email"]
+        username = serializer.validated_data["username"]
+        password = serializer.validated_data["password"]
+
+        # Check both silently — no response difference between "email taken",
+        # "username taken", or "everything is new".
+        email_taken = User.objects.filter(email__iexact=email).exists()
+        username_taken = User.objects.filter(username__iexact=username).exists()
+
+        if not email_taken and not username_taken:
+            token = PendingRegistration.make_token()
+            PendingRegistration.objects.update_or_create(
+                email=email,
+                defaults={
+                    "username": username,
+                    "password_hash": make_password(password),
+                    "token": token,
+                    "expires_at": timezone.now() + timedelta(hours=24),
+                },
+            )
+            confirm_url = (
+                f"{settings.FRONTEND_URL}/auth/confirm-registration?token={token}"
+            )
+            send_mail(
+                subject="Confirm your Workout Tracker account",
+                message=(
+                    f"Hi {username},\n\n"
+                    "Tap the link below to complete your registration:\n"
+                    f"{confirm_url}\n\n"
+                    "This link expires in 24 hours.\n\n"
+                    "If you didn't sign up for Workout Tracker, ignore this email."
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+            )
+
+        return Response({"detail": _REGISTER_GENERIC_MESSAGE}, status=status.HTTP_201_CREATED)
+
+
+class ConfirmRegistrationView(APIView):
+    """POST /api/auth/confirm-registration/ — body: { token }.
+
+    Validates the token from the confirmation email, creates the user account,
+    and returns a JWT pair so the app can log the user in immediately."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        token = request.data.get("token", "").strip()
+        if not token:
+            return Response(
+                {"detail": "Token is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            pending = PendingRegistration.objects.get(token=token)
+        except PendingRegistration.DoesNotExist:
+            return Response(
+                {"detail": "This confirmation link is invalid or has already been used."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if pending.is_expired:
+            pending.delete()
+            return Response(
+                {"detail": "This confirmation link has expired. Please sign up again."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if User.objects.filter(email__iexact=pending.email).exists():
+            pending.delete()
+            return Response(
+                {"detail": "This confirmation link is invalid or has already been used."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if User.objects.filter(username__iexact=pending.username).exists():
+            pending.delete()
+            return Response(
+                {
+                    "detail": (
+                        "The username you chose was taken while your link was pending. "
+                        "Please sign up again with a different username."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        user = User(email=pending.email, username=pending.username)
+        user.password = pending.password_hash  # already hashed — don't call set_password()
+        user.save()
+        pending.delete()
+
         refresh = RefreshToken.for_user(user)
         return Response(
             {
