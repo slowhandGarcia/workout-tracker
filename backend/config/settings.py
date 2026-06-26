@@ -265,3 +265,8 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@workouttracke
 
 # Base URL of the Expo app, used to build the link inside the reset email.
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8081")
+
+
+# Brute-force login protection — override via env vars on Railway if needed.
+LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "5"))
+LOGIN_LOCKOUT_MINUTES = int(os.environ.get("LOGIN_LOCKOUT_MINUTES", "15"))

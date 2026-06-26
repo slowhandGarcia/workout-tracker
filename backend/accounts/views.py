@@ -1,7 +1,10 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import generics, permissions, status
@@ -12,6 +15,7 @@ from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, Ou
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from .models import LoginAttempt
 from .serializers import (
     CustomTokenObtainPairSerializer,
     PasswordResetConfirmSerializer,
@@ -21,6 +25,9 @@ from .serializers import (
 )
 
 User = get_user_model()
+
+_MAX_ATTEMPTS = getattr(settings, "LOGIN_MAX_ATTEMPTS", 5)
+_LOCKOUT_MINUTES = getattr(settings, "LOGIN_LOCKOUT_MINUTES", 15)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -45,9 +52,40 @@ class RegisterView(generics.CreateAPIView):
 
 
 class LoginView(TokenObtainPairView):
-    """POST /api/auth/login/ — body: { email, password }."""
+    """POST /api/auth/login/ — body: { email, password }.
+
+    Rate-limited: after LOGIN_MAX_ATTEMPTS failures within LOGIN_LOCKOUT_MINUTES
+    the endpoint returns 429 until the window expires. Successful login clears
+    the counter. Failures for non-existent emails are recorded too, so an
+    attacker can't bypass the lock by varying a known-bad email."""
 
     serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        email = request.data.get("email", "").strip().lower()
+
+        if email:
+            cutoff = timezone.now() - timedelta(minutes=_LOCKOUT_MINUTES)
+            recent_failures = LoginAttempt.objects.filter(
+                email=email, attempted_at__gte=cutoff
+            ).count()
+            if recent_failures >= _MAX_ATTEMPTS:
+                return Response(
+                    {"detail": "Too many failed attempts. Please try again later."},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+
+        try:
+            response = super().post(request, *args, **kwargs)
+        except Exception:
+            if email:
+                LoginAttempt.objects.create(email=email)
+            raise
+
+        # Successful login — wipe the failure history for this email.
+        if email:
+            LoginAttempt.objects.filter(email=email).delete()
+        return response
 
 
 class MeView(generics.RetrieveUpdateDestroyAPIView):
