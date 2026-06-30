@@ -17,19 +17,19 @@ export interface ThemeColors {
 const THEME_COLORS: Record<ThemeMode, ThemeColors> = {
   light: {
     background: "#ffffff",
-    surface: "#f9fafb",
-    border: "#e5e7eb",
+    surface: "#f4f4f5",
+    border: "#e4e4e7",
     text: "#111827",
-    muted: "#6b7280",
-    placeholder: "#9ca3af",
+    muted: "#71717a",
+    placeholder: "#a1a1aa",
   },
   dark: {
-    background: "#09090b",
-    surface: "#18181b",
-    border: "#27272a",
-    text: "#ffffff",
-    muted: "#a1a1aa",
-    placeholder: "#71717a",
+    background: "#0a0a0a",
+    surface: "#141414",
+    border: "#222222",
+    text: "#f5f5f5",
+    muted: "#6b7280",
+    placeholder: "#4b5563",
   },
 };
 

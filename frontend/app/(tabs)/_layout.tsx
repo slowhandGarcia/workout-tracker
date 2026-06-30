@@ -19,15 +19,26 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: true,
-        tabBarActiveTintColor: "#2563eb",
-        tabBarInactiveTintColor: isDark ? "#71717a" : "#9ca3af",
+        tabBarActiveTintColor: "#3b82f6",
+        tabBarInactiveTintColor: isDark ? "#4b5563" : "#9ca3af",
         tabBarStyle: {
-          backgroundColor: isDark ? "#09090b" : "#ffffff",
-          borderTopColor: isDark ? "#27272a" : "#e5e7eb",
+          backgroundColor: isDark ? "#0a0a0a" : "#ffffff",
+          borderTopColor: isDark ? "#1a1a1a" : "#e4e4e7",
+          borderTopWidth: 1,
+          height: 60,
+          paddingBottom: 10,
+          paddingTop: 6,
         },
-        headerStyle: { backgroundColor: isDark ? "#09090b" : "#ffffff" },
-        headerTintColor: isDark ? "#ffffff" : "#09090b",
-        headerTitleStyle: { fontWeight: "600" },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: "600" },
+        headerStyle: {
+          backgroundColor: isDark ? "#0a0a0a" : "#ffffff",
+          // removes the iOS/Android hairline under the header
+          shadowColor: "transparent",
+          elevation: 0,
+        },
+        headerShadowVisible: false,
+        headerTintColor: isDark ? "#f5f5f5" : "#111827",
+        headerTitleStyle: { fontWeight: "700", fontSize: 18 },
       }}
     >
       <Tabs.Screen

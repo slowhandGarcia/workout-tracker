@@ -66,9 +66,7 @@ export default function FeedScreen() {
         style: "destructive",
         onPress: async () => {
           const result = await deletePost(postId);
-          if (!result.success) {
-            Alert.alert("Couldn't delete post", result.error);
-          }
+          if (!result.success) Alert.alert("Couldn't delete post", result.error);
         },
       },
     ]);
@@ -79,44 +77,40 @@ export default function FeedScreen() {
       <FlatList
         data={posts}
         keyExtractor={(post) => post.id}
-        contentContainerStyle={{ paddingTop: 4, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingTop: 12, paddingBottom: 120 }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
             tintColor={colors.muted}
-            colors={["#2563eb"]}
+            colors={["#3b82f6"]}
           />
         }
         ListHeaderComponent={
-          <View>
-            <Text className="text-sm px-4 pt-2 pb-3" style={{ color: colors.muted }}>
-              Show everyone the awesome progress you are making!
-            </Text>
-            {!isLoggedIn && (
-              <Pressable
-                onPress={() =>
-                  router.push({
-                    pathname: "/auth/login",
-                    params: { message: "Log in to share your progress" },
-                  })
-                }
-                className="mx-4 mb-4 rounded-xl py-3.5 items-center"
-                style={{ backgroundColor: colors.surface }}
-              >
-                <Text className="text-base font-semibold text-blue-600">Log in to post!</Text>
-              </Pressable>
-            )}
-          </View>
+          !isLoggedIn ? (
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: "/auth/login",
+                  params: { message: "Log in to share your progress" },
+                })
+              }
+              className="mx-4 mb-4 rounded-2xl py-4 flex-row items-center justify-center gap-2"
+              style={{ backgroundColor: "#1d3a6e" }}
+            >
+              <Ionicons name="log-in-outline" size={18} color="#60a5fa" />
+              <Text className="text-sm font-semibold" style={{ color: "#60a5fa" }}>
+                Log in to post and interact
+              </Text>
+            </Pressable>
+          ) : null
         }
         renderItem={({ item }) => (
           <PostCard
             post={item}
             currentUserId={user?.id}
             onPressPhoto={(index) => openViewer(item.images, index)}
-            onToggleLike={() =>
-              requireAuth(() => toggleLike(item.id), "Log in to like posts")
-            }
+            onToggleLike={() => requireAuth(() => toggleLike(item.id), "Log in to like posts")}
             onPressComment={() =>
               requireAuth(() => setActiveCommentPostId(item.id), "Log in to comment")
             }
@@ -126,24 +120,56 @@ export default function FeedScreen() {
         )}
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator className="mt-20" color={colors.muted} />
+            <ActivityIndicator className="mt-24" color="#3b82f6" size="large" />
           ) : (
-            <View className="items-center mt-20 px-8">
-              <Ionicons name="people-outline" size={40} color={colors.muted} />
-              <Text className="text-center mt-3" style={{ color: colors.muted }}>
-                No posts yet. Share something with the community!
+            <View className="items-center mt-24 px-8">
+              <View
+                className="w-20 h-20 rounded-full items-center justify-center mb-5"
+                style={{ backgroundColor: colors.surface }}
+              >
+                <Ionicons name="people-outline" size={36} color={colors.muted} />
+              </View>
+              <Text
+                className="text-lg font-semibold mb-2"
+                style={{ color: colors.text }}
+              >
+                Nothing here yet
               </Text>
+              <Text
+                className="text-sm text-center leading-5"
+                style={{ color: colors.muted }}
+              >
+                Be the first to share your progress with the community.
+              </Text>
+              {isLoggedIn && (
+                <Pressable
+                  onPress={() => setIsComposerVisible(true)}
+                  className="mt-6 px-6 py-3 rounded-xl"
+                  style={{ backgroundColor: "#3b82f6" }}
+                >
+                  <Text className="text-white font-semibold text-sm">Share a Post</Text>
+                </Pressable>
+              )}
             </View>
           )
         }
       />
 
+      {/* Floating action button */}
       {isLoggedIn && (
         <Pressable
           onPress={() =>
             requireAuth(() => setIsComposerVisible(true), "Log in to share your progress")
           }
-          className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-blue-600 items-center justify-center shadow-lg"
+          className="absolute bottom-8 right-5 w-14 h-14 rounded-full items-center justify-center"
+          style={{
+            backgroundColor: "#3b82f6",
+            shadowColor: "#3b82f6",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.5,
+            shadowRadius: 12,
+            elevation: 8,
+          }}
         >
           <Ionicons name="add" size={28} color="#ffffff" />
         </Pressable>
@@ -169,9 +195,7 @@ export default function FeedScreen() {
         onSendComment={async (text) => {
           if (!activeCommentPostId) return;
           const result = await addComment(activeCommentPostId, text, authorUsername);
-          if (!result.success) {
-            Alert.alert("Couldn't add comment", result.error);
-          }
+          if (!result.success) Alert.alert("Couldn't add comment", result.error);
         }}
       />
     </View>

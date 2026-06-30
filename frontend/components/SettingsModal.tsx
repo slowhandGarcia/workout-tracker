@@ -20,6 +20,7 @@ import {
   DEFAULT_PROFILE_NAME,
   DEFAULT_PROFILE_BIO,
 } from "@/store/useProfileStore";
+import { ChangePasswordModal } from "@/components/ChangePasswordModal";
 
 interface SettingsModalProps {
   visible: boolean;
@@ -38,6 +39,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const { name, bio, location, email, avatarUri } = useProfileStore();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isChangePasswordVisible, setIsChangePasswordVisible] = useState(false);
 
   const hasFilledProfile =
     !!avatarUri ||
@@ -208,20 +210,21 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                   </Text>
                 </View>
 
-                <View
-                  className="flex-row items-center justify-between py-2 mt-1 border-t opacity-50"
-                  style={{ borderColor: colors.border }}
-                >
-                  <View className="flex-row items-center gap-2">
-                    <Ionicons name="lock-closed-outline" size={14} color={colors.muted} />
-                    <Text className="text-sm" style={{ color: colors.muted }}>
-                      Change Password
-                    </Text>
-                  </View>
-                  <Text className="text-xs" style={{ color: colors.placeholder }}>
-                    Coming soon
-                  </Text>
-                </View>
+                {!isGuest && (
+                  <Pressable
+                    onPress={() => setIsChangePasswordVisible(true)}
+                    className="flex-row items-center justify-between py-2 mt-1 border-t active:opacity-60"
+                    style={{ borderColor: colors.border }}
+                  >
+                    <View className="flex-row items-center gap-2">
+                      <Ionicons name="lock-closed-outline" size={14} color={colors.muted} />
+                      <Text className="text-sm" style={{ color: colors.text }}>
+                        Change Password
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                  </Pressable>
+                )}
               </View>
             </>
           )}
@@ -280,6 +283,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           )}
         </ScrollView>
       </SafeAreaView>
+
+      <ChangePasswordModal
+        visible={isChangePasswordVisible}
+        onClose={() => setIsChangePasswordVisible(false)}
+      />
     </Modal>
   );
 }

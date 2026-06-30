@@ -45,6 +45,7 @@ class CommunityPostViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         image_files = request.FILES.getlist("images")
+        gif_url = request.data.get("gif_url", "").strip()
 
         # For multipart requests, DRF's request.data merges file objects
         # into the same dict as the text fields under the "images" key, which
@@ -58,6 +59,11 @@ class CommunityPostViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         image_urls = _save_uploaded_images(image_files, request) if image_files else []
+
+        # Append a remote GIF URL (e.g. from Giphy) after uploaded images.
+        # Only allow https to avoid storing plaintext http references.
+        if gif_url and gif_url.startswith("https://"):
+            image_urls.append(gif_url)
 
         post = serializer.save(author=request.user, images=image_urls)
         headers = self.get_success_headers(serializer.data)

@@ -18,6 +18,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import LoginAttempt, PendingRegistration
 from .serializers import (
+    ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
@@ -232,6 +233,33 @@ class LogoutView(APIView):
                 {"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST
             )
         return Response(status=status.HTTP_205_RESET_CONTENT)
+
+
+class ChangePasswordView(APIView):
+    """POST /api/auth/change-password/ — requires authentication.
+    Body: { current_password, new_password, new_password2 }.
+
+    After the password is changed every outstanding refresh token for this
+    user is blacklisted, invalidating all other active sessions immediately.
+    The client should also clear its own local session and redirect to login
+    so the user proves they know the new password."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(
+            data=request.data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        for token in OutstandingToken.objects.filter(user=user):
+            BlacklistedToken.objects.get_or_create(token=token)
+
+        return Response(
+            {"detail": "Password changed successfully."},
+            status=status.HTTP_200_OK,
+        )
 
 
 class PasswordResetRequestView(APIView):

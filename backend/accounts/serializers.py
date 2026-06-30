@@ -90,6 +90,49 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         return user
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    """Validates and applies an authenticated password change.
+
+    Requires the user to supply their current password so an attacker who
+    grabs an unlocked phone can't silently change credentials — they still
+    need to know the old password. After save() completes the caller should
+    blacklist all existing refresh tokens so every other active session is
+    invalidated."""
+
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+    new_password2 = serializers.CharField(write_only=True, label="Confirm new password")
+
+    def validate_current_password(self, value):
+        if not self.context["request"].user.check_password(value):
+            raise serializers.ValidationError("Current password is incorrect.")
+        return value
+
+    def validate_new_password(self, value):
+        # Run through Django's configured password validators (length, common
+        # password list, similarity to username/email, etc.).
+        try:
+            validate_password(value, user=self.context["request"].user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(list(exc.messages))
+        return value
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password2"]:
+            raise serializers.ValidationError({"new_password2": "Passwords do not match."})
+        if attrs["new_password"] == attrs["current_password"]:
+            raise serializers.ValidationError(
+                {"new_password": "New password must be different from your current password."}
+            )
+        return attrs
+
+    def save(self):
+        user = self.context["request"].user
+        user.set_password(self.validated_data["new_password"])
+        user.save()
+        return user
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """Same as the default, but also returns the user's profile alongside
     the token pair so the frontend doesn't need a second round-trip."""

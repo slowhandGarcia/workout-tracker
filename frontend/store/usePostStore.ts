@@ -103,7 +103,13 @@ export const usePostStore = create<PostStore>()((set, get) => ({
     try {
       const formData = new FormData();
       formData.append("text", text);
-      images.forEach((uri, index) => {
+
+      // Separate local file URIs (uploaded as multipart files) from remote
+      // URLs such as Giphy GIFs (sent as a plain text field instead).
+      const localImages = images.filter((uri) => !uri.startsWith("http"));
+      const gifUrl = images.find((uri) => uri.startsWith("http")) ?? null;
+
+      localImages.forEach((uri, index) => {
         const filename = uri.split("/").pop() ?? `photo-${index}.jpg`;
         const extension = /\.(\w+)$/.exec(filename)?.[1]?.toLowerCase() ?? "jpg";
         const mimeType = extension === "jpg" ? "jpeg" : extension;
@@ -116,6 +122,10 @@ export const usePostStore = create<PostStore>()((set, get) => ({
           type: `image/${mimeType}`,
         } as unknown as Blob);
       });
+
+      if (gifUrl) {
+        formData.append("gif_url", gifUrl);
+      }
 
       const { data } = await api.post<ApiPost>("/posts/", formData, {
         headers: { "Content-Type": "multipart/form-data" },

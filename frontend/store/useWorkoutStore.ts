@@ -53,6 +53,12 @@ interface WorkoutStore {
   setNotes: (workoutId: string, notes: string) => void;
   finishWorkout: (workoutId: string) => Promise<ActionResult>;
   deleteWorkout: (workoutId: string) => Promise<ActionResult>;
+  /** PATCH the current workout state to the backend. Local state stays as-is
+   *  whether or not the sync succeeds. */
+  updateWorkout: (workoutId: string) => Promise<ActionResult>;
+  /** Restore a workout to a previously captured snapshot — used when the user
+   *  discards edits in the Workout Details screen. */
+  revertWorkout: (workoutId: string, snapshot: Workout) => void;
   addWorkoutImages: (workoutId: string, uris: string[]) => void;
   removeWorkoutImage: (workoutId: string, index: number) => void;
   setBodyWeight: (
@@ -331,6 +337,37 @@ export const useWorkoutStore = create<WorkoutStore>()(
           return { success: false, error: getApiErrorMessage(error, "Failed to sync workout.") };
         }
       },
+
+      updateWorkout: async (workoutId) => {
+        const workout = get().workouts.find((w) => w.id === workoutId);
+        if (!workout) return { success: false, error: "Workout not found." };
+
+        // Guests and unsynced workouts are local-only — nothing to PATCH.
+        if (!workout.isSynced || useAuthStore.getState().isGuest) {
+          return { success: true };
+        }
+
+        try {
+          const { data } = await api.patch<ApiWorkout>(`/workouts/${workoutId}/`, {
+            body_weight: workout.bodyWeight ?? null,
+            weight_unit: workout.weightUnit ?? "kg",
+            notes: workout.notes ?? "",
+            sets: flattenExercises(workout.exercises),
+          });
+          const synced = toWorkout(data);
+          set((state) => ({
+            workouts: state.workouts.map((w) => (w.id !== workoutId ? w : synced)),
+          }));
+          return { success: true };
+        } catch (error) {
+          return { success: false, error: getApiErrorMessage(error, "Failed to save changes.") };
+        }
+      },
+
+      revertWorkout: (workoutId, snapshot) =>
+        set((state) => ({
+          workouts: state.workouts.map((w) => (w.id !== workoutId ? w : snapshot)),
+        })),
 
       deleteWorkout: async (workoutId) => {
         const workout = get().workouts.find((w) => w.id === workoutId);

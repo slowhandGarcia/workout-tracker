@@ -39,6 +39,26 @@ class WorkoutViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Workout.objects.filter(user=self.request.user)
 
+    def update(self, request, *args, **kwargs):
+        """Mirror the same data normalisation as create() so PATCH requests
+        that arrive as multipart (rare but possible) are handled consistently."""
+        partial = kwargs.pop("partial", False)
+
+        if hasattr(request.data, "getlist"):
+            data = {key: request.data.get(key) for key in request.data}
+        else:
+            data = dict(request.data)
+
+        sets_raw = data.get("sets")
+        if isinstance(sets_raw, str):
+            data["sets"] = json.loads(sets_raw)
+
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        workout = serializer.save()
+        return Response(self.get_serializer(workout).data)
+
     def create(self, request, *args, **kwargs):
         image_files = request.FILES.getlist("images")
 
